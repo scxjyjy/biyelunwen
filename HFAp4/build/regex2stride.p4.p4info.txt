@@ -1,0 +1,171 @@
+pkg_info {
+  arch: "v1model"
+}
+tables {
+  preamble {
+    id: 42684892
+    name: "MyIngress.t_popFirstStack"
+    alias: "t_popFirstStack"
+  }
+  match_fields {
+    id: 1
+    name: "meta.Stack.CurrentStateVector"
+    bitwidth: 32
+    match_type: TERNARY
+  }
+  action_refs {
+    id: 25968503
+  }
+  action_refs {
+    id: 21257015
+    annotations: "@defaultonly"
+    scope: DEFAULT_ONLY
+  }
+  size: 1024
+}
+tables {
+  preamble {
+    id: 50092907
+    name: "MyIngress.t_send_back"
+    alias: "t_send_back"
+  }
+  action_refs {
+    id: 33521880
+  }
+  size: 1024
+}
+tables {
+  preamble {
+    id: 46363344
+    name: "MyIngress.t_NFA_match_0"
+    alias: "t_NFA_match_0"
+  }
+  match_fields {
+    id: 1
+    name: "meta.state"
+    bitwidth: 16
+    match_type: EXACT
+  }
+  match_fields {
+    id: 2
+    name: "hdr.patrns[0].pattern"
+    bitwidth: 8
+    match_type: TERNARY
+  }
+  match_fields {
+    id: 3
+    name: "hdr.patrns[1].pattern"
+    bitwidth: 8
+    match_type: TERNARY
+  }
+  action_refs {
+    id: 23331327
+  }
+  action_refs {
+    id: 31004348
+  }
+  action_refs {
+    id: 25824930
+  }
+  action_refs {
+    id: 32121835
+  }
+  action_refs {
+    id: 21257015
+    annotations: "@defaultonly"
+    scope: DEFAULT_ONLY
+  }
+  size: 1024
+}
+tables {
+  preamble {
+    id: 36976857
+    name: "MyIngress.t_init"
+    alias: "t_init"
+  }
+  action_refs {
+    id: 25300664
+  }
+  size: 1024
+}
+actions {
+  preamble {
+    id: 21257015
+    name: "NoAction"
+    alias: "NoAction"
+    annotations: "@noWarn(\"unused\")"
+  }
+}
+actions {
+  preamble {
+    id: 33346606
+    name: "MyIngress.a_mark_as_to_recirculate"
+    alias: "a_mark_as_to_recirculate"
+  }
+}
+actions {
+  preamble {
+    id: 33521880
+    name: "MyIngress.a_send_back"
+    alias: "a_send_back"
+  }
+}
+actions {
+  preamble {
+    id: 31004348
+    name: "MyIngress.a_mark_as_to_send_backend"
+    alias: "a_mark_as_to_send_backend"
+  }
+}
+actions {
+  preamble {
+    id: 25968503
+    name: "MyIngress.popCurrentStateVector"
+    alias: "popCurrentStateVector"
+  }
+  params {
+    id: 1
+    name: "pop_value"
+    bitwidth: 16
+  }
+  params {
+    id: 2
+    name: "clearMask"
+    bitwidth: 32
+  }
+}
+actions {
+  preamble {
+    id: 32121835
+    name: "MyIngress.operation_drop"
+    alias: "operation_drop"
+  }
+}
+actions {
+  preamble {
+    id: 25824930
+    name: "MyIngress.a_nop"
+    alias: "a_nop"
+  }
+}
+actions {
+  preamble {
+    id: 23331327
+    name: "MyIngress.pushNextStateVector"
+    alias: "pushNextStateVector"
+  }
+  params {
+    id: 1
+    name: "StateMask"
+    bitwidth: 32
+  }
+}
+actions {
+  preamble {
+    id: 25300664
+    name: "MyIngress.a_init"
+    alias: "a_init"
+  }
+}
+type_info {
+}

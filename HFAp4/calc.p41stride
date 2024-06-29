@@ -1,0 +1,387 @@
+
+#include <core.p4>
+#include <v1model.p4>
+const bit<16> TYPE_IPV4 = 0x800;
+const bit<8> TABLE_NUM = 1;
+
+const bit<16> ETHER_HEADER_LENGTH = 14;
+const bit<16> IPV4_HEADER_LENGTH = 20;
+const bit<16> ICMP_HEADER_LENGTH = 8;
+const bit<16> TCP_HEADER_LENGTH = 20;
+const bit<16> UDP_HEADER_LENGTH = 8;
+
+#define STACK_DEPTH 3
+#define SecondStack 2
+#define IP_PROTOCOLS_ICMP 1
+#define IP_PROTOCOLS_TCP 6
+#define IP_PROTOCOLS_UDP 17
+#define ON  0
+#define OFF  1
+#define MARK_SEND_BAK 6
+#define MARK_RECIR 1
+#define MAX_HOPS 100
+typedef bit<16> state_t;
+typedef bit<9>  egressSpec_t;
+typedef bit<48> macAddr_t;
+typedef bit<32> ip4Addr_t;
+const bit<32> STABLE_STATE = 0x0;
+const bit<32> START_STATE = 0x1;
+const bit<32> STATE_MASK = 0x00ffffff;
+/*
+ * Define the headers the program will recognize
+ */
+
+/*
+ * All headers, used in the program needs to be assembed into a single struct.
+ * We only need to declare the type, but there is no need to instantiate it,
+ * because it is done "by the architecture", i.e. outside of P4 functions
+ */
+header ethernet_t {
+    macAddr_t dstAddr;
+    macAddr_t srcAddr;
+    bit<16>   etherType;
+}
+
+header ipv4_t {
+    bit<4>    version;
+    bit<4>    ihl;
+    bit<8>    diffserv;
+    bit<16>   totalLen;
+    bit<16>   identification;
+    bit<3>    flags;
+    bit<13>   fragOffset;
+    bit<8>    ttl;
+    bit<8>    protocol;
+    bit<16>   hdrChecksum;
+    ip4Addr_t srcAddr;
+    ip4Addr_t dstAddr;
+}
+
+header icmp_t {
+    bit<8> type;
+    bit<8> code;
+    bit<16> icmpHdrChecksum;
+    bit<16> id;
+    bit<16> seq;
+}
+
+header tcp_t {
+    bit<16> srcPort;
+    bit<16> dstPort;
+    bit<32> seqNo;
+    bit<32> ackNo;
+    bit<4>  dataOffset;
+    bit<3>  res;
+    bit<3>  ecn;
+    bit<6>  ctrl;
+    bit<16> window;
+    bit<16> checksum;
+    bit<16> urgentPtr;
+}
+
+header udp_t {
+    bit<16> srcPort;
+    bit<16> dstPort;
+    bit<16> length_;
+    bit<16> checksum;
+}
+
+header patrn_t {
+    bit<8> pattern;
+}
+/*
+ * All metadata, globally used in the program, also  needs to be assembed
+ * into a single struct. As in the case of the headers, we only need to
+ * declare the type, but there is no need to instantiate it,
+ * because it is done "by the architecture", i.e. outside of P4 functions
+ */
+ header stack_element_t {
+    bit<8> value;
+}
+
+ struct stack_t {
+     bit<32> CurrentStateVector;
+     bit<32> SecondStateVector;
+ }
+
+struct metadata {
+    /* In our case it is empty */
+    @field_list(1)
+    state_t state;
+    @field_list(1,2)
+    bit<8> flags;
+    @field_list(1,2,3)
+    bit<8> stackFlag;
+    @field_list(1,2,3,4)
+    bit<8> ExtractNextchar;
+    @field_list(1,2,3,4,5)
+    bit<16> pattern_num;
+    @field_list(1,2,3,4,5,6)
+    bit<16> non_payload_length;
+    @field_list(1,2,3,4,5,6,7)
+    bit<16> payload_length;
+    @field_list(1,2,3,4,5,6,7,8)
+    stack_t Stack;
+    @field_list(1,2,3,4,5,6,7,8,9)
+    bit<1> non_first_pass;
+}
+struct headers {
+    @name("ethernet")
+    ethernet_t              ethernet;
+    @name("ipv4")
+    ipv4_t                  ipv4;
+    @name("icmp")
+    icmp_t                  icmp;
+    @name("tcp")
+    tcp_t                   tcp;
+    @name("udp")
+    udp_t                   udp;
+    patrn_t[MAX_HOPS]       patrns;
+}
+/*************************************************************************
+ ***********************  P A R S E R  ***********************************
+ *************************************************************************/
+parser MyParser(packet_in packet,
+                out headers hdr,
+                inout metadata meta,
+                inout standard_metadata_t standard_metadata) {
+
+    state start {
+        transition parse_ethernet;
+    }
+
+    state parse_ethernet {
+        packet.extract(hdr.ethernet);
+        meta.non_payload_length = ETHER_HEADER_LENGTH;
+        transition select(hdr.ethernet.etherType) {
+            TYPE_IPV4: parse_ipv4;
+            default: accept;
+        }
+    }
+
+    state parse_ipv4 {
+        packet.extract(hdr.ipv4);
+        meta.non_payload_length = meta.non_payload_length + IPV4_HEADER_LENGTH;//34
+
+        transition select(hdr.ipv4.protocol){
+            IP_PROTOCOLS_ICMP: parse_icmp;
+            IP_PROTOCOLS_TCP: parse_tcp;
+            IP_PROTOCOLS_UDP: parse_udp;
+            default: accept;
+        }
+    }
+
+    state parse_icmp {
+        packet.extract(hdr.icmp);
+        meta.non_payload_length = meta.non_payload_length + ICMP_HEADER_LENGTH;
+        meta.pattern_num = 0;
+
+        meta.payload_length = hdr.ipv4.totalLen + 14 - meta.non_payload_length;
+        transition prepare_parse_pattern;
+    }
+
+    state parse_tcp {
+        packet.extract(hdr.tcp);
+        meta.non_payload_length = meta.non_payload_length + TCP_HEADER_LENGTH;
+        meta.pattern_num = 0;
+        meta.payload_length = hdr.ipv4.totalLen + 14 - meta.non_payload_length;
+        transition prepare_parse_pattern;
+    }
+
+    state parse_udp {
+        packet.extract(hdr.udp);
+        meta.non_payload_length = meta.non_payload_length + UDP_HEADER_LENGTH;
+        meta.pattern_num = 0;
+        meta.payload_length = hdr.ipv4.totalLen + 14 - meta.non_payload_length;
+        transition prepare_parse_pattern;
+    }
+
+    state prepare_parse_pattern {
+        transition select(meta.payload_length) {
+            0: accept;
+            default: parse_pattern;
+        }
+    }
+
+    state parse_pattern{
+        packet.extract(hdr.patrns.next);
+        meta.pattern_num = meta.pattern_num + 1;
+        meta.payload_length = meta.payload_length - 1;
+        transition select(meta.payload_length) {
+            0: accept;
+            default: parse_pattern;
+        }
+    }
+}
+
+/*************************************************************************
+ ************   C H E C K S U M    V E R I F I C A T I O N   *************
+ *************************************************************************/
+control MyVerifyChecksum(inout headers hdr,
+                         inout metadata meta) {
+    apply { }
+}
+
+/*************************************************************************
+ **************  I N G R E S S   P R O C E S S I N G   *******************
+ *************************************************************************/
+control MyIngress(inout headers hdr,
+                  inout metadata meta,
+                  inout standard_metadata_t standard_metadata) {
+
+    action a_mark_as_to_recirculate(){
+        meta.flags = MARK_RECIR;
+    }
+    action a_send_back() {
+        standard_metadata.egress_spec = 2;
+        hdr.udp.srcPort = 1024;
+        // hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
+        // hdr.ethernet.dstAddr = dstAddr;
+    }
+    action a_mark_as_to_send_backend() {
+        meta.flags = MARK_SEND_BAK;
+    }
+
+    // Pop operation
+    action popCurrentStateVector(bit<16> pop_value,bit<32> clearMask) {
+        meta.state = pop_value;
+        meta.Stack.CurrentStateVector = meta.Stack.CurrentStateVector & clearMask;
+    }
+    table t_popFirstStack {
+        key = {
+            meta.Stack.CurrentStateVector: ternary;
+        }
+        actions = {
+            popCurrentStateVector;
+        }
+    }
+
+    action operation_drop() {
+        mark_to_drop(standard_metadata);
+    }
+
+    action a_nop() {}
+    table t_send_back {
+        actions = {
+            a_send_back;
+        }
+        default_action = a_send_back;
+    }
+    // Push operation
+    action pushNextStateVector(bit<32> StateMask) {
+      meta.Stack.SecondStateVector = meta.Stack.SecondStateVector | StateMask;
+    }
+
+    table t_NFA_match_0 {
+        key = {
+            meta.state: exact;
+            hdr.patrns[0].pattern: exact;
+        }
+        actions = {
+            pushNextStateVector;
+            a_mark_as_to_send_backend;
+            a_nop;
+            operation_drop;
+
+        }
+        size = 1024;
+    }
+    action a_init(){
+        //meta.state = 0;
+        //pushNextStateVector(START_STATE);
+        meta.Stack.CurrentStateVector = START_STATE;
+    }
+
+    table t_init{
+      actions = {
+          a_init;
+      }
+      default_action = a_init;
+    }
+    apply {
+      if (hdr.patrns[0].isValid())
+      {
+          if(meta.non_first_pass == 0)
+          {
+              t_init.apply();
+              meta.non_first_pass = 1;
+          }
+
+          if(meta.Stack.CurrentStateVector & STATE_MASK > 0)
+          {
+            t_popFirstStack.apply();
+          }
+
+          t_NFA_match_0.apply();
+
+          if(meta.Stack.CurrentStateVector & STATE_MASK == 0){
+            //pushNextStateVector(START_STATE);
+            meta.Stack.SecondStateVector = meta.Stack.SecondStateVector | STABLE_STATE;
+            meta.Stack.CurrentStateVector = meta.Stack.SecondStateVector;
+            meta.Stack.SecondStateVector = 0;
+            //all current state processed , new State created ,go to next char
+            hdr.patrns.pop_front(1);
+            hdr.ipv4.totalLen = hdr.ipv4.totalLen - 1;
+            meta.pattern_num = meta.pattern_num - 1;
+          }
+        }
+        if ( meta.flags == MARK_SEND_BAK)
+        {
+           t_send_back.apply();
+        }
+        else  if (meta.flags != MARK_SEND_BAK)
+        {
+            if (meta.pattern_num > 0)
+            {
+                a_mark_as_to_recirculate();
+            }
+        }
+    }
+}
+
+/*************************************************************************
+ ****************  E G R E S S   P R O C E S S I N G   *******************
+ *************************************************************************/
+control MyEgress(inout headers hdr,
+                 inout metadata meta,
+                 inout standard_metadata_t standard_metadata) {
+     apply {
+         if (hdr.ipv4.isValid())
+         {
+             if (meta.flags == MARK_RECIR )
+             {
+                 recirculate_preserving_field_list(1);
+             }
+         }
+     }
+}
+
+/*************************************************************************
+ *************   C H E C K S U M    C O M P U T A T I O N   **************
+ *************************************************************************/
+
+control MyComputeChecksum(inout headers hdr, inout metadata meta) {
+    apply { }
+}
+
+/*************************************************************************
+ ***********************  D E P A R S E R  *******************************
+ *************************************************************************/
+control MyDeparser(packet_out packet, in headers hdr) {
+    apply {
+        packet.emit(hdr);
+    }
+}
+
+/*************************************************************************
+ ***********************  S W I T T C H **********************************
+ *************************************************************************/
+
+V1Switch(
+MyParser(),
+MyVerifyChecksum(),
+MyIngress(),
+MyEgress(),
+MyComputeChecksum(),
+MyDeparser()
+) main;

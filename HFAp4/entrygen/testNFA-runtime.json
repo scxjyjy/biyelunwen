@@ -1,0 +1,222 @@
+{
+  "target": "bmv2",
+  "p4info": "build/calc.p4.p4info.txt",
+  "bmv2_json": "build/calc.json",
+  "table_entries": [
+    {
+      "priority": 2,
+      "table": "MyIngress.t_NFA_match_0",
+      "match": {
+        "meta.state": 0,
+        "hdr.patrns[0].pattern": [
+          42,
+          0
+        ],
+        "hdr.patrns[1].pattern": [
+          97,
+          255
+        ]
+      },
+      "action_name": "MyIngress.pushNextStateVector",
+      "action_params": {
+        "StateMask": 2
+      }
+    },
+    {
+      "priority": 3,
+      "table": "MyIngress.t_NFA_match_0",
+      "match": {
+        "meta.state": 0,
+        "hdr.patrns[0].pattern": [
+          97,
+          255
+        ],
+        "hdr.patrns[1].pattern": [
+          98,
+          255
+        ]
+      },
+      "action_name": "MyIngress.pushNextStateVector",
+      "action_params": {
+        "StateMask": 4
+      }
+    },
+    {
+      "priority": 4,
+      "table": "MyIngress.t_NFA_match_0",
+      "match": {
+        "meta.state": 1,
+        "hdr.patrns[0].pattern": [
+          98,
+          255
+        ],
+        "hdr.patrns[1].pattern": [
+          99,
+          255
+        ]
+      },
+      "action_name": "MyIngress.a_mark_as_to_send_backend",
+      "action_params": {}
+    },
+    {
+      "priority": 5,
+      "table": "MyIngress.t_NFA_match_0",
+      "match": {
+        "meta.state": 1,
+        "hdr.patrns[0].pattern": [
+          98,
+          255
+        ],
+        "hdr.patrns[1].pattern": [
+          109,
+          255
+        ]
+      },
+      "action_name": "MyIngress.pushNextStateVector",
+      "action_params": {
+        "StateMask": 8
+      }
+    },
+    {
+      "priority": 6,
+      "table": "MyIngress.t_NFA_match_0",
+      "match": {
+        "meta.state": 2,
+        "hdr.patrns[0].pattern": [
+          99,
+          255
+        ],
+        "hdr.patrns[1].pattern": [
+          42,
+          0
+        ]
+      },
+      "action_name": "MyIngress.a_mark_as_to_send_backend",
+      "action_params": {}
+    },
+    {
+      "priority": 7,
+      "table": "MyIngress.t_NFA_match_0",
+      "match": {
+        "meta.state": 2,
+        "hdr.patrns[0].pattern": [
+          109,
+          255
+        ],
+        "hdr.patrns[1].pattern": [
+          100,
+          255
+        ]
+      },
+      "action_name": "MyIngress.a_mark_as_to_send_backend",
+      "action_params": {}
+    },
+    {
+      "priority": 8,
+      "table": "MyIngress.t_NFA_match_0",
+      "match": {
+        "meta.state": 3,
+        "hdr.patrns[0].pattern": [
+          100,
+          255
+        ],
+        "hdr.patrns[1].pattern": [
+          42,
+          0
+        ]
+      },
+      "action_name": "MyIngress.a_mark_as_to_send_backend",
+      "action_params": {}
+    },
+    {
+      "priority": 9,
+      "table": "MyIngress.t_popFirstStack",
+      "match": {
+        "meta.Stack.CurrentStateVector": [
+          16,
+          16
+        ]
+      },
+      "action_name": "MyIngress.popCurrentStateVector",
+      "action_params": {
+        "pop_value": 4,
+        "clearMask": 16777199
+      }
+    },
+    {
+      "priority": 10,
+      "table": "MyIngress.t_popFirstStack",
+      "match": {
+        "meta.Stack.CurrentStateVector": [
+          32,
+          32
+        ]
+      },
+      "action_name": "MyIngress.popCurrentStateVector",
+      "action_params": {
+        "pop_value": 5,
+        "clearMask": 16777183
+      }
+    },
+    {
+      "priority": 11,
+      "table": "MyIngress.t_popFirstStack",
+      "match": {
+        "meta.Stack.CurrentStateVector": [
+          1,
+          1
+        ]
+      },
+      "action_name": "MyIngress.popCurrentStateVector",
+      "action_params": {
+        "pop_value": 0,
+        "clearMask": 16777214
+      }
+    },
+    {
+      "priority": 12,
+      "table": "MyIngress.t_popFirstStack",
+      "match": {
+        "meta.Stack.CurrentStateVector": [
+          2,
+          2
+        ]
+      },
+      "action_name": "MyIngress.popCurrentStateVector",
+      "action_params": {
+        "pop_value": 1,
+        "clearMask": 16777213
+      }
+    },
+    {
+      "priority": 13,
+      "table": "MyIngress.t_popFirstStack",
+      "match": {
+        "meta.Stack.CurrentStateVector": [
+          4,
+          4
+        ]
+      },
+      "action_name": "MyIngress.popCurrentStateVector",
+      "action_params": {
+        "pop_value": 2,
+        "clearMask": 16777211
+      }
+    },
+    {
+      "priority": 14,
+      "table": "MyIngress.t_popFirstStack",
+      "match": {
+        "meta.Stack.CurrentStateVector": [
+          8,
+          8
+        ]
+      },
+      "action_name": "MyIngress.popCurrentStateVector",
+      "action_params": {
+        "pop_value": 3,
+        "clearMask": 16777207
+      }
+    }
+  ]
+}
