@@ -9,7 +9,7 @@ pip install pyahocorasick
 
 ### Data plane
 
-Build the [P4 tutorial VM]("https://github.com/p4lang/tutorials"), and move the dir `BOLT` into `tutorials/exercise/`.
+Build the [P4 tutorial VM]("https://github.com/p4lang/tutorials"), and move the dir  into `tutorials/exercise/`.
 
 ## Running
 
